@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meridian Lending — Loan Application Portal</title>
+  <style>
+    /* ─── Reset & Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:        #1a4f8a;
+      --blue-dark:   #0f3360;
+      --blue-light:  #e8f0fc;
+      --green:       #1a8a5a;
+      --green-light: #e8f9f0;
+      --red:         #c0392b;
+      --red-light:   #fdf0ef;
+      --gray-50:     #f8f9fb;
+      --gray-100:    #eef0f4;
+      --gray-300:    #c8cdd8;
+      --gray-500:    #6b7280;
+      --gray-700:    #374151;
+      --gray-900:    #111827;
+      --radius:      8px;
+      --shadow:      0 2px 12px rgba(0,0,0,.10);
+      --shadow-lg:   0 8px 32px rgba(0,0,0,.14);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-700);
+      min-height: 100vh;
+    }
+
+    /* ─── Header ───────────────────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 100%);
+      color: #fff;
+      padding: 0 40px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+    header .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header .brand svg {
+      width: 32px; height: 32px; flex-shrink: 0;
+    }
+    header .brand-name {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -.3px;
+    }
+    header .brand-tagline {
+      font-size: 12px;
+      opacity: .75;
+      font-weight: 400;
+    }
+    header .secure-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      opacity: .85;
+      background: rgba(255,255,255,.12);
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+
+    /* ─── Progress Bar ─────────────────────────────────────────── */
+    .progress-bar-wrap {
+      background: #fff;
+      border-bottom: 1px solid var(--gray-100);
+      padding: 0 40px;
+    }
+    .progress-steps {
+      display: flex;
+      max-width: 780px;
+      margin: 0 auto;
+    }
+    .step {
+      flex: 1;
+      text-align: center;
+      padding: 14px 0 12px;
+      font-size: 12px;
+      color: var(--gray-500);
+      position: relative;
+    }
+    .step.active {
+      color: var(--blue);
+      font-weight: 600;
+      border-bottom: 3px solid var(--blue);
+    }
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--gray-100);
+      color: var(--gray-500);
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .step.active .step-num {
+      background: var(--blue);
+      color: #fff;
+    }
+    .step.done .step-num {
+      background: var(--green);
+      color: #fff;
+    }
+    .step.done { color: var(--green); }
+
+    /* ─── Main Layout ──────────────────────────────────────────── */
+    main {
+      max-width: 860px;
+      margin: 40px auto;
+      padding: 0 20px 60px;
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 28px;
+      align-items: start;
+    }
+    @media (max-width: 760px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    /* ─── Card ─────────────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 22px 28px 18px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .card-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 3px;
+    }
+    .card-header p {
+      font-size: 13px;
+      color: var(--gray-500);
+    }
+    .card-body {
+      padding: 28px;
+    }
+
+    /* ─── Form ─────────────────────────────────────────────────── */
+    .form-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--gray-500);
+      margin: 24px 0 14px;
+    }
+    .form-section-label:first-child { margin-top: 0; }
+
+    .field {
+      margin-bottom: 18px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin-bottom: 6px;
+    }
+    label .required {
+      color: var(--red);
+      margin-left: 2px;
+    }
+    label .optional {
+      color: var(--gray-500);
+      font-weight: 400;
+      font-size: 12px;
+      margin-left: 4px;
+    }
+    input[type="text"],
+    input[type="email"],
+    select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid var(--gray-300);
+      border-radius: 6px;
+      font-size: 14px;
+      color: var(--gray-900);
+      background: #fff;
+      transition: border-color .15s, box-shadow .15s;
+      outline: none;
+      font-family: inherit;
+    }
+    input:focus, select:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(26,79,138,.12);
+    }
+    input::placeholder { color: var(--gray-300); }
+    .field-hint {
+      font-size: 12px;
+      color: var(--gray-500);
+      margin-top: 5px;
+    }
+
+    /* file input */
+    input[type="file"] {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px dashed var(--gray-300);
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--gray-700);
+      background: var(--gray-50);
+      cursor: pointer;
+      font-family: inherit;
+    }
+    input[type="file"]:focus {
+      border-color: var(--blue);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(26,79,138,.12);
+    }
+
+    /* upload progress */
+    .upload-progress {
+      display: none;
+      font-size: 12.5px;
+      color: var(--blue);
+      margin-top: 6px;
+      padding: 6px 10px;
+      background: var(--blue-light);
+      border-radius: 4px;
+    }
+    .upload-progress.visible { display: block; }
+
+    /* consent checkbox */
+    .consent-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 16px;
+      background: var(--blue-light);
+      border-radius: 6px;
+      border: 1px solid #c4d8f8;
+      margin-top: 4px;
+    }
+    .consent-row input[type="checkbox"] {
+      width: 16px; height: 16px;
+      margin-top: 2px;
+      flex-shrink: 0;
+      accent-color: var(--blue);
+    }
+    .consent-row label {
+      font-size: 12.5px;
+      font-weight: 400;
+      color: var(--gray-700);
+      margin: 0;
+    }
+
+    /* submit button */
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity .15s, transform .1s;
+      font-family: inherit;
+      letter-spacing: .3px;
+    }
+    .submit-btn:hover:not(:disabled) { opacity: .93; }
+    .submit-btn:active:not(:disabled) { transform: scale(.99); }
+    .submit-btn:disabled { opacity: .65; cursor: not-allowed; }
+
+    /* ─── Spinner ──────────────────────────────────────────────── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    .spinner.visible { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Status Banners ───────────────────────────────────────── */
+    .banner {
+      display: none;
+      padding: 16px 20px;
+      border-radius: var(--radius);
+      margin-top: 20px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .banner.visible { display: block; }
+    .banner-success {
+      background: var(--green-light);
+      border: 1.5px solid #a3e8cc;
+      color: #155c3a;
+    }
+    .banner-error {
+      background: var(--red-light);
+      border: 1.5px solid #f5b9b4;
+      color: #7b1a13;
+    }
+    .banner-icon {
+      font-size: 18px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .banner strong { font-weight: 700; }
+    .ref-id {
+      font-family: "SF Mono", "Fira Mono", "Courier New", monospace;
+      font-size: 13px;
+      background: rgba(0,0,0,.07);
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    /* ─── Sidebar ──────────────────────────────────────────────── */
+    .sidebar-card .card-header { background: var(--blue-light); }
+    .sidebar-card .card-header h2 { font-size: 15px; color: var(--blue-dark); }
+
+    .info-list { list-style: none; padding: 0; }
+    .info-list li {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--gray-100);
+      font-size: 13px;
+      display: flex;
+      gap: 10px;
+    }
+    .info-list li:last-child { border-bottom: none; }
+    .info-list .icon {
+      font-size: 16px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .info-list strong {
+      display: block;
+      font-weight: 600;
+      color: var(--gray-900);
+      margin-bottom: 2px;
+    }
+
+    .timeline { padding: 0; list-style: none; }
+    .timeline li {
+      position: relative;
+      padding: 0 0 18px 28px;
+      font-size: 13px;
+      color: var(--gray-500);
+    }
+    .timeline li::before {
+      content: '';
+      position: absolute;
+      left: 8px; top: 7px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--gray-300);
+      z-index: 1;
+    }
+    .timeline li::after {
+      content: '';
+      position: absolute;
+      left: 11px; top: 15px;
+      width: 2px; height: 100%;
+      background: var(--gray-100);
+    }
+    .timeline li:last-child::after { display: none; }
+    .timeline li.active::before { background: var(--blue); }
+    .timeline li.done::before { background: var(--green); }
+    .timeline strong {
+      display: block;
+      color: var(--gray-700);
+      font-weight: 600;
+    }
+
+    /* ─── Footer ───────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      font-size: 11.5px;
+      color: var(--gray-500);
+      padding: 0 20px 32px;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    footer a { color: var(--blue); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<!-- ─── HEADER ──────────────────────────────────────────────────── -->
+<header>
+  <div class="brand">
+    <!-- Simple house/bank SVG icon -->
+    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="32" height="32" rx="6" fill="rgba(255,255,255,0.15)"/>
+      <path d="M6 16L16 7L26 16" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="10" y="16" width="12" height="10" rx="1" stroke="white" stroke-width="2" fill="none"/>
+      <rect x="13.5" y="20" width="5" height="6" rx="1" fill="white" opacity=".7"/>
+    </svg>
+    <div>
+      <div class="brand-name">Meridian Lending</div>
+      <div class="brand-tagline">Residential &amp; Commercial Loans</div>
+    </div>
+  </div>
+  <div class="secure-badge">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    256-bit SSL Encrypted
+  </div>
+</header>
+
+<!-- ─── PROGRESS STEPS ───────────────────────────────────────────── -->
+<div class="progress-bar-wrap">
+  <div class="progress-steps">
+    <div class="step active">
+      <div class="step-num">1</div><br>Application
+    </div>
+    <div class="step">
+      <div class="step-num">2</div><br>AI Review
+    </div>
+    <div class="step">
+      <div class="step-num">3</div><br>Underwriting
+    </div>
+    <div class="step">
+      <div class="step-num">4</div><br>Decision
+    </div>
+  </div>
+</div>
+
+<!-- ─── MAIN CONTENT ─────────────────────────────────────────────── -->
+<main>
+
+  <!-- ─── FORM CARD ─────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Loan Application — Step 1 of 4</h2>
+      <p>Please fill in the details below and attach your supporting documentation.</p>
+    </div>
+    <div class="card-body">
+      <form id="loanForm" novalidate>
+
+        <div class="form-section-label">Applicant Information</div>
+
+        <div class="field">
+          <label for="applicantName">Full Legal Name <span class="required">*</span></label>
+          <input type="text" id="applicantName" name="applicantName"
+                 placeholder="e.g. Jane M. Doe" autocomplete="name" required />
+        </div>
+
+        <div class="field">
+          <label for="applicantEmail">
+            Email Address
+            <span class="optional">(optional — for status updates)</span>
+          </label>
+          <input type="email" id="applicantEmail" name="applicantEmail"
+                 placeholder="you@example.com" autocomplete="email" />
+        </div>
+
+        <div class="form-section-label">Supporting Documentation</div>
+
+        <div class="field">
+          <label for="documentFile">Credit &amp; Income Report <span class="required">*</span></label>
+          <input type="file" id="documentFile" name="documentFile" accept=".pdf" required />
+          <div class="upload-progress" id="uploadProgress"></div>
+          <div class="field-hint">PDF format, max 10 MB. Report must have been issued within 90 days.</div>
+        </div>
+
+        <div class="form-section-label">Loan Details</div>
+
+        <div class="field">
+          <label for="loanType">Loan Type <span class="required">*</span></label>
+          <select id="loanType">
+            <option value="conventional">Conventional Mortgage</option>
+            <option value="fha">FHA Loan</option>
+            <option value="va">VA Loan</option>
+            <option value="jumbo">Jumbo Loan</option>
+            <option value="heloc">HELOC</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="loanAmount">Requested Loan Amount <span class="required">*</span></label>
+          <input type="text" id="loanAmount" value="$325,000" />
+        </div>
+
+        <!-- Consent -->
+        <div class="consent-row">
+          <input type="checkbox" id="consent" checked />
+          <label for="consent">
+            I authorize Meridian Lending to obtain and review my credit report and supporting
+            documentation. I confirm all information provided is accurate and complete.
+            <a href="#" style="color:var(--blue);">Privacy Policy</a>
+          </label>
+        </div>
+
+        <!-- Submit button -->
+        <button type="submit" class="submit-btn" id="submitBtn">
+          <span id="btnText">Submit Loan Application</span>
+          <div class="spinner" id="spinner"></div>
+        </button>
+
+        <!-- Status banners -->
+        <div class="banner banner-success" id="successBanner">
+          <span class="banner-icon">&#10003;</span>
+          <strong>Application submitted successfully.</strong><br />
+          Your application is now being processed by our AI underwriting system.
+          Reference: <span class="ref-id" id="jobRef"></span><br />
+          <span style="font-size:12px;color:#1a6644;margin-top:6px;display:block;">
+            You can track the status in the Meridian Lending portal or via the email address provided.
+          </span>
+        </div>
+        <div class="banner banner-error" id="errorBanner">
+          <span class="banner-icon">&#9888;</span>
+          <strong>Submission failed.</strong>
+          <span id="errorMsg"></span>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ─── SIDEBAR ──────────────────────────────────────────────── -->
+  <div>
+    <div class="card sidebar-card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <h2>What Happens Next?</h2>
+      </div>
+      <div class="card-body" style="padding:20px 22px;">
+        <ul class="timeline">
+          <li class="active">
+            <strong>Application Received</strong>
+            Documents sent for AI analysis
+          </li>
+          <li>
+            <strong>AI Underwriting Review</strong>
+            Credit score, DTI, LTV evaluated
+          </li>
+          <li>
+            <strong>Policy Verification</strong>
+            Checked against current lending rules
+          </li>
+          <li>
+            <strong>Decision Issued</strong>
+            Approve, Conditional, or Refer to Underwriter
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card sidebar-card">
+      <div class="card-header">
+        <h2>Why We Need This</h2>
+      </div>
+      <div class="card-body" style="padding:20px 22px;">
+        <ul class="info-list">
+          <li>
+            <span class="icon">&#128196;</span>
+            <div>
+              <strong>Credit Report</strong>
+              Used to verify credit score and payment history
+            </div>
+          </li>
+          <li>
+            <span class="icon">&#128272;</span>
+            <div>
+              <strong>Secure Processing</strong>
+              Documents are encrypted in transit and at rest
+            </div>
+          </li>
+          <li>
+            <span class="icon">&#9200;</span>
+            <div>
+              <strong>Fast Turnaround</strong>
+              AI review typically completes in under 2 minutes
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  &copy; 2025 Meridian Lending, LLC. NMLS #000000 &mdash;
+  <a href="#">Terms of Use</a> &bull; <a href="#">Privacy Policy</a> &bull;
+  <a href="#">Fair Lending Notice</a><br />
+  Equal Housing Lender. All loans subject to credit approval.
+</footer>
+
+<!-- ─── CONFIGURATION ────────────────────────────────────────────── -->
+<!--
+  SUBSTITUTE THESE VALUES before the demo:
+    TRIGGER_URL  — The full API trigger URL from Orchestrator
+                   e.g. https://cloud.uipath.com/{org}/{tenant}/orchestrator_/t/{folderKey}/{slug}
+    ACCESS_TOKEN — A Personal Access Token (PAT) with OR.* scopes
+                   Generated at: cloud.uipath.com -> User Menu -> My Profile -> Personal Access Tokens
+-->
+<script>
+  const CONFIG = {
+    TRIGGER_URL:  "https://cloud.uipath.com/YOUR_ORG/YOUR_TENANT/orchestrator_/t/FOLDER_KEY/SLUG",
+    ACCESS_TOKEN: "YOUR_PAT_TOKEN_HERE",
+
+    // $callMode options:
+    //   "FireAndForget"     — POST returns 200 immediately, no job ID in response
+    //   "AsyncRequestReply" — POST returns 202 + Location header; must poll for result
+    //   "Sync"              — Blocks until job completes (max 15 min)
+    //
+    // For demo use "FireAndForget" — fires instantly, job appears in Orchestrator UI right away,
+    // and we extract a pseudo-reference from the response headers.
+    CALL_MODE: "FireAndForget",
+
+    // --- Storage Bucket upload ---
+    // Base Orchestrator REST API URL (no trailing slash)
+    ORCHESTRATOR_BASE_URL: "https://cloud.uipath.com/courswvdqnod/DefaultTenant/orchestrator_",
+
+    // Numeric ID of the "loan-applications" bucket.
+    // Find it: Orchestrator → your folder → Storage Buckets → click bucket → URL shows /Buckets(12345)
+    BUCKET_ID: "REPLACE_WITH_BUCKET_NUMERIC_ID",
+
+    // Orchestrator folder that contains the bucket (e.g. "Shared" or "LoanDemo")
+    FOLDER_PATH: "REPLACE_WITH_FOLDER_PATH",
+
+    BUCKET_NAME: "loan-applications",
+  };
+
+  // ─── DOM refs ───────────────────────────────────────────────────
+  const form       = document.getElementById("loanForm");
+  const submitBtn  = document.getElementById("submitBtn");
+  const btnText    = document.getElementById("btnText");
+  const spinner    = document.getElementById("spinner");
+  const successBanner = document.getElementById("successBanner");
+  const errorBanner   = document.getElementById("errorBanner");
+  const jobRef     = document.getElementById("jobRef");
+  const errorMsg   = document.getElementById("errorMsg");
+
+  // ─── Helpers ────────────────────────────────────────────────────
+  function setLoading(on) {
+    submitBtn.disabled = on;
+    btnText.textContent = on ? "Submitting…" : "Submit Loan Application";
+    spinner.className = on ? "spinner visible" : "spinner";
+  }
+  function showBanner(type, show) {
+    (type === "success" ? successBanner : errorBanner).className =
+      "banner banner-" + type + (show ? " visible" : "");
+  }
+  function generateFallbackRef() {
+    // Used when FireAndForget returns no body — generate a timestamped reference for display
+    const ts = Date.now().toString(36).toUpperCase();
+    const rnd = Math.random().toString(36).slice(2, 6).toUpperCase();
+    return "ML-" + ts + "-" + rnd;
+  }
+
+  // ─── Bucket upload helpers ────────────────────────────────────────
+  async function getWriteUri(filename) {
+    const url = `${CONFIG.ORCHESTRATOR_BASE_URL}/odata/Buckets(${CONFIG.BUCKET_ID})/UiPath.Server.Configuration.OData.GetWriteUri`
+              + `?path=${encodeURIComponent(filename)}&contentType=application/pdf`;
+    const resp = await fetch(url, {
+      headers: {
+        "Authorization": "Bearer " + CONFIG.ACCESS_TOKEN,
+        "X-UIPATH-OrganizationUnitPath": CONFIG.FOLDER_PATH,
+      },
+    });
+    if (!resp.ok) throw new Error(`GetWriteUri failed: HTTP ${resp.status}`);
+    return resp.json(); // { Uri, Headers, Method }
+  }
+
+  async function uploadToBucket(file, writeUriData) {
+    const method  = writeUriData.Method || "PUT";
+    const headers = Object.assign({ "x-ms-blob-type": "BlockBlob" }, writeUriData.Headers || {});
+    const bytes   = await file.arrayBuffer();
+    const resp    = await fetch(writeUriData.Uri, { method, headers, body: bytes });
+    if (!resp.ok) throw new Error(`Bucket upload failed: HTTP ${resp.status}`);
+  }
+
+  // ─── Form Submit ────────────────────────────────────────────────
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const name      = document.getElementById("applicantName").value.trim();
+    const email     = document.getElementById("applicantEmail").value.trim();
+    const fileInput = document.getElementById("documentFile");
+    const file      = fileInput.files && fileInput.files[0];
+
+    if (!name) { document.getElementById("applicantName").focus(); return; }
+    if (!file) { fileInput.focus(); return; }
+    if (file.size > 10 * 1024 * 1024) {
+      errorMsg.textContent = " File exceeds 10 MB limit.";
+      showBanner("error", true);
+      return;
+    }
+
+    showBanner("success", false);
+    showBanner("error",   false);
+    setLoading(true);
+
+    const progress  = document.getElementById("uploadProgress");
+    const setProgress = (msg) => {
+      if (msg) { progress.textContent = msg; progress.className = "upload-progress visible"; }
+      else     { progress.className = "upload-progress"; }
+    };
+
+    try {
+      // Step 1: upload document to bucket
+      setProgress("Uploading document… (1/2)");
+      const writeUriData = await getWriteUri(file.name);
+      await uploadToBucket(file, writeUriData);
+
+      // Step 2: trigger agent
+      setProgress("Triggering AI review… (2/2)");
+      const body = {
+        document_path: file.name,
+        bucket_name:   CONFIG.BUCKET_NAME,
+        "$callMode":   CONFIG.CALL_MODE,
+      };
+      if (email) body.applicant_email = email;
+
+      const resp = await fetch(CONFIG.TRIGGER_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type":  "application/json",
+          "Authorization": "Bearer " + CONFIG.ACCESS_TOKEN,
+        },
+        body: JSON.stringify(body),
+      });
+
+      setProgress(null);
+
+      if (resp.ok || resp.status === 200 || resp.status === 202) {
+        let ref = null;
+        const locationHeader = resp.headers.get("Location") || "";
+        if (locationHeader) {
+          const parts = locationHeader.split("/").filter(Boolean);
+          ref = parts[parts.length - 1] || null;
+        }
+        if (!ref) {
+          try { const data = await resp.json(); ref = data.jobKey || data.key || data.id || null; } catch (_) {}
+        }
+        if (!ref) ref = generateFallbackRef();
+
+        jobRef.textContent = ref;
+        showBanner("success", true);
+        document.querySelectorAll(".step")[0].className = "step done";
+        document.querySelectorAll(".step")[1].className = "step active";
+      } else {
+        let detail = "";
+        try { const errData = await resp.json(); detail = errData.message || errData.errorMessage || JSON.stringify(errData); }
+        catch (_) { detail = "HTTP " + resp.status + " " + resp.statusText; }
+        errorMsg.textContent = " " + detail;
+        showBanner("error", true);
+      }
+    } catch (err) {
+      setProgress(null);
+      let msg = err.message || "Network error.";
+      if (msg.toLowerCase().includes("cors") || msg.toLowerCase().includes("failed to fetch")) {
+        msg = "Could not reach Orchestrator. Check TRIGGER_URL and add this page's origin to Orchestrator Tenant Settings → General → API Settings CORS allowlist.";
+      }
+      errorMsg.textContent = " " + msg;
+      showBanner("error", true);
+    } finally {
+      setLoading(false);
+    }
+  });
+</script>
+
+</body>
+</html>

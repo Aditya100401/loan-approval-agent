@@ -1,0 +1,39 @@
+# ── Python ────────────────────────────────────────────────────────
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.venv/
+
+# ── Environment & credentials ─────────────────────────────────────
+.env
+
+# ── UiPath auth & runtime artifacts ──────────────────────────────
+# .uipath/ contains auth tokens managed by `uipath auth` — never commit
+.uipath/
+# __uipath/ contains runtime state (state.db etc.)
+__uipath/
+# Generated output files from agent runs
+result.json
+docs/status.json
+# UiPath Studio project file — not needed for coded agents
+project.uiproj
+
+# ── Local development documentation ───────────────────────────────
+# Personal/internal docs — not part of the public repo
+dev-docs/
+CLAUDE.md
+AGENTS.md
+.agent/
+agent.mermaid
+
+# ── Claude Code personal settings & memory ────────────────────────
+.claude/
+
+# ── OS / editor ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

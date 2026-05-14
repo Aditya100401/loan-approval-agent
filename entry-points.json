@@ -1,0 +1,729 @@
+{
+    "$schema": "https://cloud.uipath.com/draft/2024-12/entry-point",
+    "$id": "entry-points.json",
+    "entryPoints": [
+        {
+            "filePath": "agent",
+            "uniqueId": "9b4e38aa-5c23-4cbe-bcc9-3cf4dc888894",
+            "type": "agent",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "document_path": {
+                        "title": "Document Path",
+                        "type": "string"
+                    },
+                    "applicant_email": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "document_path"
+                ]
+            },
+            "output": {
+                "type": "object",
+                "properties": {
+                    "decision": {
+                        "description": "Final loan approval decision.",
+                        "examples": [
+                            {
+                                "applicant_name": "John Doe",
+                                "citations": [
+                                    "credit_policies.pdf, Section 2.1: Minimum credit score 620",
+                                    "dti_standards.pdf, Section 1.2: Maximum DTI 43%"
+                                ],
+                                "credit_score": 750,
+                                "decision": "GREEN",
+                                "dti_ratio": 24.0,
+                                "reasoning": "Applicant meets all policy requirements. Credit score of 750 exceeds minimum of 620. DTI of 24% is below maximum of 43%.",
+                                "requires_human_review": false
+                            }
+                        ],
+                        "properties": {
+                            "decision": {
+                                "description": "Loan decision outcomes.",
+                                "enum": [
+                                    "GREEN",
+                                    "YELLOW",
+                                    "RED"
+                                ],
+                                "title": "DecisionType",
+                                "type": "string"
+                            },
+                            "reasoning": {
+                                "description": "Detailed explanation of the decision",
+                                "title": "Reasoning",
+                                "type": "string"
+                            },
+                            "citations": {
+                                "description": "Policy citations supporting the decision",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "title": "Citations",
+                                "type": "array"
+                            },
+                            "rule_evaluation": {
+                                "anyOf": [
+                                    {
+                                        "description": "Complete result of evaluating all business rules.",
+                                        "properties": {
+                                            "evaluations": {
+                                                "description": "All rule evaluations",
+                                                "items": {
+                                                    "description": "Result of evaluating a single business rule.",
+                                                    "properties": {
+                                                        "rule": {
+                                                            "description": "A single business rule for loan approval.",
+                                                            "examples": [
+                                                                {
+                                                                    "category": "credit",
+                                                                    "description": "Applicant must have a minimum credit score of 620",
+                                                                    "min_value": 620,
+                                                                    "name": "Minimum Credit Score",
+                                                                    "policy_source": "credit_policies.pdf, Section 2.1",
+                                                                    "rule_id": "CREDIT_001",
+                                                                    "severity": "critical"
+                                                                }
+                                                            ],
+                                                            "properties": {
+                                                                "rule_id": {
+                                                                    "description": "Unique identifier (e.g., 'CREDIT_001')",
+                                                                    "title": "Rule Id",
+                                                                    "type": "string"
+                                                                },
+                                                                "name": {
+                                                                    "description": "Human-readable rule name",
+                                                                    "title": "Name",
+                                                                    "type": "string"
+                                                                },
+                                                                "category": {
+                                                                    "description": "Categories of business rules.",
+                                                                    "enum": [
+                                                                        "credit",
+                                                                        "income",
+                                                                        "dti",
+                                                                        "ltv",
+                                                                        "employment",
+                                                                        "documentation"
+                                                                    ],
+                                                                    "title": "RuleCategory",
+                                                                    "type": "string"
+                                                                },
+                                                                "description": {
+                                                                    "description": "Full description of the rule",
+                                                                    "title": "Description",
+                                                                    "type": "string"
+                                                                },
+                                                                "severity": {
+                                                                    "description": "Severity level when a rule fails.",
+                                                                    "enum": [
+                                                                        "critical",
+                                                                        "warning",
+                                                                        "info"
+                                                                    ],
+                                                                    "title": "RuleSeverity",
+                                                                    "type": "string"
+                                                                },
+                                                                "policy_source": {
+                                                                    "description": "Policy document citation (e.g., 'credit_policies.pdf, Section 2.1')",
+                                                                    "title": "Policy Source",
+                                                                    "type": "string"
+                                                                },
+                                                                "min_value": {
+                                                                    "anyOf": [
+                                                                        {
+                                                                            "type": "number"
+                                                                        },
+                                                                        {
+                                                                            "type": "null"
+                                                                        }
+                                                                    ],
+                                                                    "default": null,
+                                                                    "description": "Minimum acceptable value",
+                                                                    "title": "Min Value"
+                                                                },
+                                                                "max_value": {
+                                                                    "anyOf": [
+                                                                        {
+                                                                            "type": "number"
+                                                                        },
+                                                                        {
+                                                                            "type": "null"
+                                                                        }
+                                                                    ],
+                                                                    "default": null,
+                                                                    "description": "Maximum acceptable value",
+                                                                    "title": "Max Value"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "rule_id",
+                                                                "name",
+                                                                "category",
+                                                                "description",
+                                                                "policy_source"
+                                                            ],
+                                                            "title": "BusinessRule",
+                                                            "type": "object"
+                                                        },
+                                                        "passed": {
+                                                            "description": "Whether the rule passed",
+                                                            "title": "Passed",
+                                                            "type": "boolean"
+                                                        },
+                                                        "actual_value": {
+                                                            "anyOf": [
+                                                                {
+                                                                    "type": "number"
+                                                                },
+                                                                {
+                                                                    "type": "null"
+                                                                }
+                                                            ],
+                                                            "default": null,
+                                                            "description": "The actual value from the application",
+                                                            "title": "Actual Value"
+                                                        },
+                                                        "message": {
+                                                            "description": "Human-readable result message",
+                                                            "title": "Message",
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "rule",
+                                                        "passed",
+                                                        "message"
+                                                    ],
+                                                    "title": "RuleEvaluation",
+                                                    "type": "object"
+                                                },
+                                                "title": "Evaluations",
+                                                "type": "array"
+                                            },
+                                            "total_rules": {
+                                                "default": 0,
+                                                "description": "Total number of rules evaluated",
+                                                "title": "Total Rules",
+                                                "type": "integer"
+                                            },
+                                            "passed_count": {
+                                                "default": 0,
+                                                "description": "Number of rules passed",
+                                                "title": "Passed Count",
+                                                "type": "integer"
+                                            },
+                                            "failed_count": {
+                                                "default": 0,
+                                                "description": "Number of rules failed",
+                                                "title": "Failed Count",
+                                                "type": "integer"
+                                            },
+                                            "critical_failures": {
+                                                "description": "Rules with critical severity that failed",
+                                                "items": {
+                                                    "description": "Result of evaluating a single business rule.",
+                                                    "properties": {
+                                                        "rule": {
+                                                            "description": "A single business rule for loan approval.",
+                                                            "examples": [
+                                                                {
+                                                                    "category": "credit",
+                                                                    "description": "Applicant must have a minimum credit score of 620",
+                                                                    "min_value": 620,
+                                                                    "name": "Minimum Credit Score",
+                                                                    "policy_source": "credit_policies.pdf, Section 2.1",
+                                                                    "rule_id": "CREDIT_001",
+                                                                    "severity": "critical"
+                                                                }
+                                                            ],
+                                                            "properties": {
+                                                                "rule_id": {
+                                                                    "description": "Unique identifier (e.g., 'CREDIT_001')",
+                                                                    "title": "Rule Id",
+                                                                    "type": "string"
+                                                                },
+                                                                "name": {
+                                                                    "description": "Human-readable rule name",
+                                                                    "title": "Name",
+                                                                    "type": "string"
+                                                                },
+                                                                "category": {
+                                                                    "description": "Categories of business rules.",
+                                                                    "enum": [
+                                                                        "credit",
+                                                                        "income",
+                                                                        "dti",
+                                                                        "ltv",
+                                                                        "employment",
+                                                                        "documentation"
+                                                                    ],
+                                                                    "title": "RuleCategory",
+                                                                    "type": "string"
+                                                                },
+                                                                "description": {
+                                                                    "description": "Full description of the rule",
+                                                                    "title": "Description",
+                                                                    "type": "string"
+                                                                },
+                                                                "severity": {
+                                                                    "description": "Severity level when a rule fails.",
+                                                                    "enum": [
+                                                                        "critical",
+                                                                        "warning",
+                                                                        "info"
+                                                                    ],
+                                                                    "title": "RuleSeverity",
+                                                                    "type": "string"
+                                                                },
+                                                                "policy_source": {
+                                                                    "description": "Policy document citation (e.g., 'credit_policies.pdf, Section 2.1')",
+                                                                    "title": "Policy Source",
+                                                                    "type": "string"
+                                                                },
+                                                                "min_value": {
+                                                                    "anyOf": [
+                                                                        {
+                                                                            "type": "number"
+                                                                        },
+                                                                        {
+                                                                            "type": "null"
+                                                                        }
+                                                                    ],
+                                                                    "default": null,
+                                                                    "description": "Minimum acceptable value",
+                                                                    "title": "Min Value"
+                                                                },
+                                                                "max_value": {
+                                                                    "anyOf": [
+                                                                        {
+                                                                            "type": "number"
+                                                                        },
+                                                                        {
+                                                                            "type": "null"
+                                                                        }
+                                                                    ],
+                                                                    "default": null,
+                                                                    "description": "Maximum acceptable value",
+                                                                    "title": "Max Value"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "rule_id",
+                                                                "name",
+                                                                "category",
+                                                                "description",
+                                                                "policy_source"
+                                                            ],
+                                                            "title": "BusinessRule",
+                                                            "type": "object"
+                                                        },
+                                                        "passed": {
+                                                            "description": "Whether the rule passed",
+                                                            "title": "Passed",
+                                                            "type": "boolean"
+                                                        },
+                                                        "actual_value": {
+                                                            "anyOf": [
+                                                                {
+                                                                    "type": "number"
+                                                                },
+                                                                {
+                                                                    "type": "null"
+                                                                }
+                                                            ],
+                                                            "default": null,
+                                                            "description": "The actual value from the application",
+                                                            "title": "Actual Value"
+                                                        },
+                                                        "message": {
+                                                            "description": "Human-readable result message",
+                                                            "title": "Message",
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "rule",
+                                                        "passed",
+                                                        "message"
+                                                    ],
+                                                    "title": "RuleEvaluation",
+                                                    "type": "object"
+                                                },
+                                                "title": "Critical Failures",
+                                                "type": "array"
+                                            },
+                                            "warnings": {
+                                                "description": "Rules with warning severity that failed",
+                                                "items": {
+                                                    "description": "Result of evaluating a single business rule.",
+                                                    "properties": {
+                                                        "rule": {
+                                                            "description": "A single business rule for loan approval.",
+                                                            "examples": [
+                                                                {
+                                                                    "category": "credit",
+                                                                    "description": "Applicant must have a minimum credit score of 620",
+                                                                    "min_value": 620,
+                                                                    "name": "Minimum Credit Score",
+                                                                    "policy_source": "credit_policies.pdf, Section 2.1",
+                                                                    "rule_id": "CREDIT_001",
+                                                                    "severity": "critical"
+                                                                }
+                                                            ],
+                                                            "properties": {
+                                                                "rule_id": {
+                                                                    "description": "Unique identifier (e.g., 'CREDIT_001')",
+                                                                    "title": "Rule Id",
+                                                                    "type": "string"
+                                                                },
+                                                                "name": {
+                                                                    "description": "Human-readable rule name",
+                                                                    "title": "Name",
+                                                                    "type": "string"
+                                                                },
+                                                                "category": {
+                                                                    "description": "Categories of business rules.",
+                                                                    "enum": [
+                                                                        "credit",
+                                                                        "income",
+                                                                        "dti",
+                                                                        "ltv",
+                                                                        "employment",
+                                                                        "documentation"
+                                                                    ],
+                                                                    "title": "RuleCategory",
+                                                                    "type": "string"
+                                                                },
+                                                                "description": {
+                                                                    "description": "Full description of the rule",
+                                                                    "title": "Description",
+                                                                    "type": "string"
+                                                                },
+                                                                "severity": {
+                                                                    "description": "Severity level when a rule fails.",
+                                                                    "enum": [
+                                                                        "critical",
+                                                                        "warning",
+                                                                        "info"
+                                                                    ],
+                                                                    "title": "RuleSeverity",
+                                                                    "type": "string"
+                                                                },
+                                                                "policy_source": {
+                                                                    "description": "Policy document citation (e.g., 'credit_policies.pdf, Section 2.1')",
+                                                                    "title": "Policy Source",
+                                                                    "type": "string"
+                                                                },
+                                                                "min_value": {
+                                                                    "anyOf": [
+                                                                        {
+                                                                            "type": "number"
+                                                                        },
+                                                                        {
+                                                                            "type": "null"
+                                                                        }
+                                                                    ],
+                                                                    "default": null,
+                                                                    "description": "Minimum acceptable value",
+                                                                    "title": "Min Value"
+                                                                },
+                                                                "max_value": {
+                                                                    "anyOf": [
+                                                                        {
+                                                                            "type": "number"
+                                                                        },
+                                                                        {
+                                                                            "type": "null"
+                                                                        }
+                                                                    ],
+                                                                    "default": null,
+                                                                    "description": "Maximum acceptable value",
+                                                                    "title": "Max Value"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "rule_id",
+                                                                "name",
+                                                                "category",
+                                                                "description",
+                                                                "policy_source"
+                                                            ],
+                                                            "title": "BusinessRule",
+                                                            "type": "object"
+                                                        },
+                                                        "passed": {
+                                                            "description": "Whether the rule passed",
+                                                            "title": "Passed",
+                                                            "type": "boolean"
+                                                        },
+                                                        "actual_value": {
+                                                            "anyOf": [
+                                                                {
+                                                                    "type": "number"
+                                                                },
+                                                                {
+                                                                    "type": "null"
+                                                                }
+                                                            ],
+                                                            "default": null,
+                                                            "description": "The actual value from the application",
+                                                            "title": "Actual Value"
+                                                        },
+                                                        "message": {
+                                                            "description": "Human-readable result message",
+                                                            "title": "Message",
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "rule",
+                                                        "passed",
+                                                        "message"
+                                                    ],
+                                                    "title": "RuleEvaluation",
+                                                    "type": "object"
+                                                },
+                                                "title": "Warnings",
+                                                "type": "array"
+                                            },
+                                            "recommended_decision": {
+                                                "default": "YELLOW",
+                                                "description": "Recommended decision based on rule evaluation",
+                                                "title": "Recommended Decision",
+                                                "type": "string"
+                                            }
+                                        },
+                                        "title": "RuleEvaluationResult",
+                                        "type": "object"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ],
+                                "default": null,
+                                "description": "Complete business rule evaluation results"
+                            },
+                            "applicant_name": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ],
+                                "default": null,
+                                "description": "Applicant name",
+                                "title": "Applicant Name"
+                            },
+                            "applicant_email": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ],
+                                "default": null,
+                                "description": "Applicant email for notification",
+                                "title": "Applicant Email"
+                            },
+                            "credit_score": {
+                                "anyOf": [
+                                    {
+                                        "type": "integer"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ],
+                                "default": null,
+                                "description": "Credit score used in decision",
+                                "title": "Credit Score"
+                            },
+                            "dti_ratio": {
+                                "anyOf": [
+                                    {
+                                        "type": "number"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ],
+                                "default": null,
+                                "description": "DTI ratio used in decision",
+                                "title": "Dti Ratio"
+                            },
+                            "ltv_ratio": {
+                                "anyOf": [
+                                    {
+                                        "type": "number"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ],
+                                "default": null,
+                                "description": "LTV ratio used in decision",
+                                "title": "Ltv Ratio"
+                            },
+                            "requires_human_review": {
+                                "default": false,
+                                "description": "Whether this decision needs HITL approval",
+                                "title": "Requires Human Review",
+                                "type": "boolean"
+                            },
+                            "human_review_status": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ],
+                                "default": null,
+                                "description": "Status of human review (pending, approved, rejected)",
+                                "title": "Human Review Status"
+                            },
+                            "human_review_comments": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ],
+                                "default": null,
+                                "description": "Comments from human reviewer",
+                                "title": "Human Review Comments"
+                            }
+                        },
+                        "required": [
+                            "decision",
+                            "reasoning"
+                        ],
+                        "title": "Decision",
+                        "type": "object"
+                    },
+                    "hitl_task_id": {
+                        "type": "string"
+                    },
+                    "error": {
+                        "type": "string"
+                    }
+                },
+                "required": []
+            },
+            "graph": {
+                "nodes": [
+                    {
+                        "id": "__start__",
+                        "name": "__start__",
+                        "type": "__start__",
+                        "subgraph": null,
+                        "metadata": {}
+                    },
+                    {
+                        "id": "classify",
+                        "name": "classify",
+                        "type": "node",
+                        "subgraph": null,
+                        "metadata": {}
+                    },
+                    {
+                        "id": "extract",
+                        "name": "extract",
+                        "type": "node",
+                        "subgraph": null,
+                        "metadata": {}
+                    },
+                    {
+                        "id": "validate",
+                        "name": "validate",
+                        "type": "node",
+                        "subgraph": null,
+                        "metadata": {}
+                    },
+                    {
+                        "id": "retrieve_policies",
+                        "name": "retrieve_policies",
+                        "type": "node",
+                        "subgraph": null,
+                        "metadata": {}
+                    },
+                    {
+                        "id": "generate_decision",
+                        "name": "generate_decision",
+                        "type": "node",
+                        "subgraph": null,
+                        "metadata": {}
+                    },
+                    {
+                        "id": "create_hitl",
+                        "name": "create_hitl",
+                        "type": "node",
+                        "subgraph": null,
+                        "metadata": {}
+                    },
+                    {
+                        "id": "handle_error",
+                        "name": "handle_error",
+                        "type": "node",
+                        "subgraph": null,
+                        "metadata": {}
+                    },
+                    {
+                        "id": "__end__",
+                        "name": "__end__",
+                        "type": "__end__",
+                        "subgraph": null,
+                        "metadata": {}
+                    }
+                ],
+                "edges": [
+                    {
+                        "source": "__start__",
+                        "target": "classify",
+                        "label": null
+                    },
+                    {
+                        "source": "classify",
+                        "target": "extract",
+                        "label": null
+                    },
+                    {
+                        "source": "extract",
+                        "target": "validate",
+                        "label": null
+                    },
+                    {
+                        "source": "generate_decision",
+                        "target": "create_hitl",
+                        "label": null
+                    },
+                    {
+                        "source": "retrieve_policies",
+                        "target": "generate_decision",
+                        "label": null
+                    },
+                    {
+                        "source": "validate",
+                        "target": "retrieve_policies",
+                        "label": null
+                    },
+                    {
+                        "source": "create_hitl",
+                        "target": "__end__",
+                        "label": null
+                    }
+                ]
+            }
+        }
+    ]
+}
