@@ -16,6 +16,6 @@ const CONFIG = {
   CALL_MODE:            "FireAndForget",
   ORCHESTRATOR_BASE_URL: "https://cloud.uipath.com/YOUR_ORG/YOUR_TENANT/orchestrator_",
   BUCKET_ID:            "YOUR_BUCKET_ID",
-  FOLDER_PATH:          "Shared",
-  BUCKET_NAME:          "Loan_Applications",
+  FOLDER_PATH:          "YOUR_FOLDER_NAME",
+  BUCKET_NAME:          "YOUR_BUCKET_NAME",
 };
