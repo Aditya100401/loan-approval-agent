@@ -56,6 +56,12 @@ class Decision(BaseModel):
     dti_ratio: Optional[float] = Field(None, description="DTI ratio used in decision")
     ltv_ratio: Optional[float] = Field(None, description="LTV ratio used in decision")
     
+    # LLM-generated email draft for the applicant
+    email_draft: Optional[str] = Field(
+        None,
+        description="HTML email body drafted by the LLM to send to the applicant"
+    )
+
     # Human review status
     requires_human_review: bool = Field(
         default=False,

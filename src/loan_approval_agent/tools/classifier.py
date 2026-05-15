@@ -1,15 +1,19 @@
 """Document classification tool."""
 
+import pdfplumber
+
 from ..models import ClassificationResult
 from ..models.documents import DocumentType
 
 
+def _extract_text(document_path: str) -> str:
+    with pdfplumber.open(document_path) as pdf:
+        return "\n".join(page.extract_text() or "" for page in pdf.pages)
+
+
 def classify_document(document_path: str) -> ClassificationResult:
     try:
-        from docling.document_converter import DocumentConverter
-        converter = DocumentConverter()
-        result = converter.convert(document_path)
-        text = result.document.export_to_markdown().lower()
+        text = _extract_text(document_path).lower()
     except Exception:
         return ClassificationResult(
             document_type=DocumentType.LOAN_APPLICATION,

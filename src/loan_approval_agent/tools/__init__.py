@@ -4,12 +4,12 @@ from .classifier import classify_document
 from .extractor import extract_information
 from .validator import validate_data
 from .policy_retriever import retrieve_policies
-from .decision_generator import generate_decision
+from .decision_generator import generate_llm_decision
 
 __all__ = [
     "classify_document",
     "extract_information",
     "validate_data",
     "retrieve_policies",
-    "generate_decision",
+    "generate_llm_decision",
 ]

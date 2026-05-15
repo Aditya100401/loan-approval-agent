@@ -1,6 +1,8 @@
 """Document extraction tool."""
 
 import re
+import pdfplumber
+
 from ..models import ExtractedData
 
 
@@ -18,10 +20,8 @@ def _find(patterns: list[str], text: str) -> str | None:
 
 def extract_information(document_path: str, document_type: str) -> ExtractedData:
     try:
-        from docling.document_converter import DocumentConverter
-        converter = DocumentConverter()
-        result = converter.convert(document_path)
-        text = result.document.export_to_markdown()
+        with pdfplumber.open(document_path) as pdf:
+            text = "\n".join(page.extract_text() or "" for page in pdf.pages)
     except Exception:
         return ExtractedData()
 
@@ -51,6 +51,8 @@ def extract_information(document_path: str, document_type: str) -> ExtractedData
         r'monthly\s+(?:debt\s+)?payments?[:\s]+\$?([\d,]+)',
         r'total\s+monthly\s+(?:obligations?|debts?)[:\s]+\$?([\d,]+)',
         r'monthly\s+obligations?[:\s]+\$?([\d,]+)',
+        # Credit report TOTALS table: "TOTALS  7  6  $235,810  $2,230  $0"
+        r'TOTALS\s+\d+\s+\d+\s+\$[\d,]+\s+\$?([\d,]+)\s+\$0',
     ])
     loan_amount = num([
         r'(?:loan|mortgage)\s+amount[:\s]+\$?([\d,]+)',
@@ -66,19 +68,26 @@ def extract_information(document_path: str, document_type: str) -> ExtractedData
     total_debt = num([
         r'total\s+(?:outstanding\s+)?debt[:\s]+\$?([\d,]+)',
         r'total\s+balance[:\s]+\$?([\d,]+)',
+        # Credit report TOTALS table: total balance column
+        r'TOTALS\s+\d+\s+\d+\s+\$?([\d,]+)',
     ])
     delinquencies_raw = integer([
         r'delinquent\s+accounts?[:\s]+(\d+)',
         r'(?:number\s+of\s+)?delinquenc\w*[:\s]+(\d+)',
+        r'(\d+)\s+(?:historical\s+)?(?:30-day\s+)?late\s+payments?',
         r'late\s+payments?[:\s]+(\d+)',
     ])
     credit_history = integer([
         r'credit\s+history[:\s]+(\d+)\s+years?',
         r'oldest\s+account[:\s]+(\d+)\s+years?',
         r'(\d+)\s+years?\s+of\s+credit',
+        # Credit report format: "(16 years)" in Section 6
+        r'opened\s+\d+/\d+\s+\((\d+)\s+years?\)',
     ])
     name_raw = _find([
-        r'(?:applicant|borrower|prepared\s+for|name)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
+        # Handle middle initials: "Jordan M. Testworth" — [^\S\n] matches spaces but not newlines
+        r'Full\s+Legal\s+Name[:\s]+([A-Z][a-z]+(?:[^\S\n]+[A-Z]\.?[^\S\n]+[A-Z][a-z]+|[^\S\n]+[A-Z][a-z]+)+)',
+        r'(?:applicant|borrower|prepared\s+for)[:\s]+([A-Z][a-z]+(?:[^\S\n]+[A-Z]\.?[^\S\n]+[A-Z][a-z]+|[^\S\n]+[A-Z][a-z]+)+)',
     ], text)
 
     return ExtractedData(
