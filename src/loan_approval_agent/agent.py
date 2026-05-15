@@ -17,6 +17,7 @@ from .models import (
     ExtractedData,
     ApplicantData,
     Decision,
+    DecisionType,
     PolicyResult,
 )
 
@@ -49,7 +50,7 @@ from .tools.classifier import classify_document
 from .tools.extractor import extract_information
 from .tools.validator import validate_data
 from .tools.policy_retriever import retrieve_policies
-from .tools.decision_generator import generate_decision
+from .tools.decision_generator import generate_llm_decision
 
 
 # =============================================================================
@@ -98,6 +99,7 @@ async def fetch_document_node(state: LoanAgentState) -> dict:
 
     Falls back to using document_path directly when running locally without SDK.
     """
+    print(f"[fetch_document] bucket={state['bucket_name']} path={state['document_path']}")
     if _sdk is None:
         return {"local_document_path": state["document_path"]}
 
@@ -111,20 +113,25 @@ async def fetch_document_node(state: LoanAgentState) -> dict:
             blob_file_path=state["document_path"],
             destination_path=tmp.name,
         )
+        print(f"[fetch_document] downloaded to {tmp.name}")
         return {"local_document_path": tmp.name}
     except Exception as e:
+        print(f"[fetch_document] ERROR: {e}")
         return {"error": str(e), "error_node": "fetch_document"}
 
 
 async def classify_node(state: LoanAgentState) -> dict:
     """Classify the document type."""
     if state.get("error"):
+        print(f"[classify] skipped due to earlier error: {state.get('error')}")
         return {}
     try:
         path = state.get("local_document_path") or state["document_path"]
         result = classify_document(path)
+        print(f"[classify] type={result.document_type} confidence={result.confidence}")
         return {"classification": result}
     except Exception as e:
+        print(f"[classify] ERROR: {e}")
         return {"error": str(e), "error_node": "classify"}
 
 
@@ -137,8 +144,10 @@ async def extract_node(state: LoanAgentState) -> dict:
         doc_type = classification.document_type if classification else "unknown"
         path = state.get("local_document_path") or state["document_path"]
         result = extract_information(path, doc_type)
+        print(f"[extract] name={result.applicant_name} credit={result.credit_score} income={result.annual_income}")
         return {"extracted_data": result}
     except Exception as e:
+        print(f"[extract] ERROR: {e}")
         return {"error": str(e), "error_node": "extract"}
 
 
@@ -193,84 +202,86 @@ async def retrieve_policies_node(state: LoanAgentState) -> dict:
 
 
 async def generate_decision_node(state: LoanAgentState) -> dict:
-    """Generate the loan decision."""
+    """Call the LLM to evaluate the applicant and generate a decision with email draft."""
     if state.get("error"):
+        print(f"[generate_decision] skipped due to earlier error: {state.get('error')}")
         return {}
     try:
         applicant_data = state.get("applicant_data")
         policies = state.get("policies", [])
 
         if not applicant_data:
+            print("[generate_decision] ERROR: no applicant data")
             return {"error": "No applicant data for decision", "error_node": "generate_decision"}
 
-        result = generate_decision(applicant_data, policies)
+        result = await generate_llm_decision(applicant_data, policies)
+        print(f"[generate_decision] decision={result.decision} applicant={result.applicant_name}")
         return {"decision": result}
     except Exception as e:
+        print(f"[generate_decision] ERROR: {e}")
         return {"error": str(e), "error_node": "generate_decision"}
 
 
 async def _send_email(connection_id: str, to: str, subject: str, body: str) -> None:
-    """Send an email via UiPath Integration Service Gmail connector.
-
-    Uses metadata_async to discover the correct activity path at runtime,
-    then caches the result for subsequent calls.
-    """
+    """Send an email via Gmail REST API using an OAuth token from the UiPath connection."""
     if _sdk is None:
         return
 
-    from uipath.platform.connections import ActivityMetadata, ActivityParameterLocationInfo
+    import base64
+    import httpx
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from uipath.platform.connections.connections import ConnectionTokenType
 
-    # Discover activity metadata once per process lifetime
-    if not hasattr(_send_email, "_metadata"):
-        try:
-            connections = await _sdk.connections.list_async(folder_path="Shared")
-            conn = next(
-                (c for c in connections if str(c.id) == connection_id), None
-            )
-            if conn is None:
-                return
-
-            raw = await _sdk.connections.metadata_async(
-                element_instance_id=conn.element_instance_id,
-                connector_key="uipath-google-gmail",
-                tool_path="/messages/send",
-            )
-            _send_email._metadata = ActivityMetadata(
-                object_path="/messages/send",
-                method_name=raw.metadata.get("method", "POST"),
-                content_type="application/json",
-                parameter_location_info=ActivityParameterLocationInfo(
-                    body_fields=["to", "subject", "body", "bodyType"],
-                ),
-            )
-        except Exception:
-            return
-
-    await _sdk.connections.invoke_activity_async(
-        activity_metadata=_send_email._metadata,
-        connection_id=connection_id,
-        activity_input={
-            "to": to,
-            "subject": subject,
-            "body": body,
-            "bodyType": "Html",
-        },
+    token_info = await _sdk.connections.retrieve_token_async(
+        key=connection_id,
+        token_type=ConnectionTokenType.DIRECT,
     )
+    access_token = token_info.access_token
+
+    msg = MIMEMultipart("alternative")
+    msg["To"] = to
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body, "html"))
+    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+            headers={"Authorization": f"Bearer {access_token}"},
+            json={"raw": raw},
+            timeout=30,
+        )
+        resp.raise_for_status()
+    print(f"[_send_email] sent to {to}")
 
 
-async def create_hitl_node(state: LoanAgentState) -> dict:
-    """Create Action Center task, suspend for human approval, then apply reviewer's decision."""
+async def setup_hitl_node(state: LoanAgentState) -> dict:
+    """Create the Action Center task and notify the reviewer.
+
+    This node runs ONCE and completes before the interrupt node, so its side
+    effects (task creation, reviewer email) are not repeated on resume.
+    The task_id is persisted to state before the graph pauses.
+    """
     decision = state.get("decision")
+    if isinstance(decision, dict):
+        decision = Decision.model_validate(decision)
+
     applicant_name = (decision.applicant_name or "Unknown") if decision else "Unknown"
     ai_recommendation = decision.decision.value if decision else "ERROR"
-    applicant_email = state.get("applicant_email")
 
-    # Retrieve Gmail connection ID from UiPath Asset
+    # Retrieve Gmail connection ID and Action Center app name from UiPath Assets
     gmail_connection_id = None
+    loan_review_app_name = None
     if _sdk is not None:
         try:
-            asset = await _sdk.assets.retrieve_async("gmail_connection_id")
+            asset = await _sdk.assets.retrieve_async("gmail_connection_id", folder_path="Shared")
             gmail_connection_id = asset.value
+        except Exception:
+            pass
+        try:
+            app_asset = await _sdk.assets.retrieve_async("loan_review_app_name", folder_path="Shared")
+            loan_review_app_name = app_asset.value
         except Exception:
             pass
 
@@ -288,13 +299,15 @@ async def create_hitl_node(state: LoanAgentState) -> dict:
                     "dti_ratio": decision.dti_ratio if decision else None,
                     "ltv_ratio": decision.ltv_ratio if decision else None,
                 },
+                app_name=loan_review_app_name,
                 priority="High" if ai_recommendation == "YELLOW" else "Medium",
             )
             task_id = task.action_key
-        except Exception:
-            pass
+            print(f"[setup_hitl] task created: {task_id}")
+        except Exception as e:
+            print(f"[setup_hitl] task creation failed: {e}")
 
-    # Email reviewer before suspending
+    # Email reviewer
     if gmail_connection_id:
         try:
             await _send_email(
@@ -309,16 +322,44 @@ async def create_hitl_node(state: LoanAgentState) -> dict:
                     f"<p>Please open <a href='https://cloud.uipath.com'>Action Center</a> to review.</p>"
                 ),
             )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[setup_hitl] reviewer email failed: {e}")
 
-    # Suspend — resumes when reviewer submits decision in Action Center
-    # Expected resume payload: {"final_decision": "GREEN"|"YELLOW"|"RED", "comments": "..."}
+    # Persist task_id to state — the checkpoint captures this before the graph pauses
+    return {"hitl_task_id": task_id}
+
+
+async def wait_for_review_node(state: LoanAgentState) -> dict:
+    """Suspend for human approval, then apply the reviewer's decision.
+
+    This node is safe to restart from the beginning on resume: interrupt() simply
+    returns the resume payload on the second entry instead of pausing again.
+    Side effects here (applicant email) only execute after the review is received.
+    """
+    decision = state.get("decision")
+    if isinstance(decision, dict):
+        decision = Decision.model_validate(decision)
+
+    task_id = state.get("hitl_task_id", "unknown")
+    applicant_name = (decision.applicant_name or "Unknown") if decision else "Unknown"
+    ai_recommendation = decision.decision.value if decision else "ERROR"
+    applicant_email = state.get("applicant_email")
+
+    # Suspend — on resume, interrupt() immediately returns the reviewer's payload.
+    # Expected payload: {"final_decision": "GREEN"|"YELLOW"|"RED", "comments": "..."}
     review = interrupt({
         "task_id": task_id,
         "ai_recommendation": ai_recommendation,
         "applicant_name": applicant_name,
     })
+
+    # UiPath runtime passes the Action Center resume payload as a JSON string, not a dict.
+    if isinstance(review, str):
+        import json
+        try:
+            review = json.loads(review)
+        except (json.JSONDecodeError, ValueError):
+            review = {"final_decision": review}
 
     # Apply reviewer's decision
     final_decision_value = review.get("final_decision", ai_recommendation)
@@ -326,11 +367,20 @@ async def create_hitl_node(state: LoanAgentState) -> dict:
     was_overridden = final_decision_value != ai_recommendation
 
     updated_decision = decision.model_copy(update={
-        "decision": final_decision_value,
+        "decision": DecisionType(final_decision_value),
         "requires_human_review": False,
         "human_review_status": "overridden" if was_overridden else "approved",
         "human_review_comments": comments,
     }) if decision else decision
+
+    # Retrieve Gmail connection ID (re-fetch; cheap and avoids stale process-cached state)
+    gmail_connection_id = None
+    if _sdk is not None:
+        try:
+            asset = await _sdk.assets.retrieve_async("gmail_connection_id", folder_path="Shared")
+            gmail_connection_id = asset.value
+        except Exception:
+            pass
 
     # Email applicant with final decision
     if gmail_connection_id and applicant_email:
@@ -341,22 +391,53 @@ async def create_hitl_node(state: LoanAgentState) -> dict:
                 "RED": "Declined",
             }.get(final_decision_value, final_decision_value)
 
+            if not was_overridden and updated_decision and updated_decision.email_draft:
+                email_body = updated_decision.email_draft
+            else:
+                outcome_line = {
+                    "GREEN": (
+                        f"We are pleased to inform you that your loan application has been "
+                        f"<b>approved</b>. A member of our team will be in touch to walk you "
+                        f"through the next steps."
+                    ),
+                    "YELLOW": (
+                        f"Your loan application has been <b>conditionally approved</b>. "
+                        f"There are a few outstanding items we will need to discuss with you "
+                        f"before finalising your offer."
+                    ),
+                    "RED": (
+                        f"After careful review by our underwriting team, we are unable to "
+                        f"approve your loan application at this time."
+                    ),
+                }.get(final_decision_value, f"Your application outcome is: <b>{decision_label}</b>.")
+
+                underwriter_note = (
+                    f"<p><b>Note from our underwriting team:</b> {comments}</p>"
+                    if comments else ""
+                )
+
+                email_body = (
+                    f"<p>Dear {applicant_name},</p>"
+                    f"<p>Thank you for your loan application with Meridian Lending. "
+                    f"{outcome_line}</p>"
+                    f"{underwriter_note}"
+                    f"<p>If you have any questions, please do not hesitate to contact us. "
+                    f"A Meridian Lending representative will be in touch with you shortly.</p>"
+                    f"<p>Sincerely,<br/><b>The Meridian Lending Team</b><br/>"
+                    f"<small style='color:#888;'>Meridian Lending, LLC — NMLS #000000 — "
+                    f"Equal Housing Lender</small></p>"
+                )
+
             await _send_email(
                 connection_id=gmail_connection_id,
                 to=applicant_email,
-                subject=f"Your Loan Application Decision — {decision_label}",
-                body=(
-                    f"<p>Dear {applicant_name},</p>"
-                    f"<p>Your loan application has been reviewed. Decision: <b>{decision_label}</b>.</p>"
-                    f"<p>{comments}</p>"
-                    f"<p>A Meridian Lending representative will be in touch shortly.</p>"
-                ),
+                subject="Your Loan Application — Meridian Lending",
+                body=email_body,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[wait_for_review] applicant email failed: {e}")
 
     return {
-        "hitl_task_id": task_id,
         "decision": updated_decision,
         "error": state.get("error"),
     }
@@ -376,7 +457,12 @@ def build_graph() -> StateGraph:
     graph.add_node("validate", validate_node)
     graph.add_node("retrieve_policies", retrieve_policies_node)
     graph.add_node("generate_decision", generate_decision_node)
-    graph.add_node("create_hitl", create_hitl_node)
+    # HITL is split into two nodes so setup side-effects run exactly once:
+    # setup_hitl completes and persists task_id before the graph pauses;
+    # wait_for_review safely restarts from the top on resume (interrupt() returns
+    # the resume payload immediately on the second entry).
+    graph.add_node("setup_hitl", setup_hitl_node)
+    graph.add_node("wait_for_review", wait_for_review_node)
 
     graph.set_entry_point("fetch_document")
 
@@ -385,8 +471,9 @@ def build_graph() -> StateGraph:
     graph.add_edge("extract", "validate")
     graph.add_edge("validate", "retrieve_policies")
     graph.add_edge("retrieve_policies", "generate_decision")
-    graph.add_edge("generate_decision", "create_hitl")
-    graph.add_edge("create_hitl", END)
+    graph.add_edge("generate_decision", "setup_hitl")
+    graph.add_edge("setup_hitl", "wait_for_review")
+    graph.add_edge("wait_for_review", END)
 
     from langgraph.checkpoint.memory import MemorySaver
     return graph.compile(checkpointer=MemorySaver())

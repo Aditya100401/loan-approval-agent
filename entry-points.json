@@ -4,13 +4,18 @@
     "entryPoints": [
         {
             "filePath": "agent",
-            "uniqueId": "9b4e38aa-5c23-4cbe-bcc9-3cf4dc888894",
+            "uniqueId": "a50ab935-8cc0-452d-92db-6722e30d81c1",
             "type": "agent",
             "input": {
                 "type": "object",
                 "properties": {
                     "document_path": {
                         "title": "Document Path",
+                        "type": "string"
+                    },
+                    "bucket_name": {
+                        "default": "loan-applications",
+                        "title": "Bucket Name",
                         "type": "string"
                     },
                     "applicant_email": {
@@ -571,6 +576,19 @@
                                 "description": "LTV ratio used in decision",
                                 "title": "Ltv Ratio"
                             },
+                            "email_draft": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ],
+                                "default": null,
+                                "description": "HTML email body drafted by the LLM to send to the applicant",
+                                "title": "Email Draft"
+                            },
                             "requires_human_review": {
                                 "default": false,
                                 "description": "Whether this decision needs HITL approval",
@@ -630,6 +648,13 @@
                         "metadata": {}
                     },
                     {
+                        "id": "fetch_document",
+                        "name": "fetch_document",
+                        "type": "node",
+                        "subgraph": null,
+                        "metadata": {}
+                    },
+                    {
                         "id": "classify",
                         "name": "classify",
                         "type": "node",
@@ -665,15 +690,15 @@
                         "metadata": {}
                     },
                     {
-                        "id": "create_hitl",
-                        "name": "create_hitl",
+                        "id": "setup_hitl",
+                        "name": "setup_hitl",
                         "type": "node",
                         "subgraph": null,
                         "metadata": {}
                     },
                     {
-                        "id": "handle_error",
-                        "name": "handle_error",
+                        "id": "wait_for_review",
+                        "name": "wait_for_review",
                         "type": "node",
                         "subgraph": null,
                         "metadata": {}
@@ -689,7 +714,7 @@
                 "edges": [
                     {
                         "source": "__start__",
-                        "target": "classify",
+                        "target": "fetch_document",
                         "label": null
                     },
                     {
@@ -703,8 +728,13 @@
                         "label": null
                     },
                     {
+                        "source": "fetch_document",
+                        "target": "classify",
+                        "label": null
+                    },
+                    {
                         "source": "generate_decision",
-                        "target": "create_hitl",
+                        "target": "setup_hitl",
                         "label": null
                     },
                     {
@@ -713,12 +743,17 @@
                         "label": null
                     },
                     {
+                        "source": "setup_hitl",
+                        "target": "wait_for_review",
+                        "label": null
+                    },
+                    {
                         "source": "validate",
                         "target": "retrieve_policies",
                         "label": null
                     },
                     {
-                        "source": "create_hitl",
+                        "source": "wait_for_review",
                         "target": "__end__",
                         "label": null
                     }

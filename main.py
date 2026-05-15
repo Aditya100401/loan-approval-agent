@@ -6,9 +6,9 @@ The agent is defined in src/loan_approval_agent/agent.py
 
 import logging
 
-# Suppress non-blocking LangGraph msgpack deserialization warnings for unregistered
-# custom Pydantic types — will be addressed before strict mode is enforced.
-logging.getLogger("langgraph.checkpoint.serde.jsonplus").setLevel(logging.ERROR)
+# Suppress verbose INFO/DEBUG from LangGraph checkpoint serializer; WARNING and above
+# (including real deserialization failures) still surface.
+logging.getLogger("langgraph.checkpoint.serde.jsonplus").setLevel(logging.WARNING)
 # Suppress OpenInferenceTracer callback error — missing on_interrupt in UiPath SDK tracer.
 # Logged as WARNING by langchain_core.callbacks.manager.handle_event when a handler
 # doesn't implement a lifecycle method (UiPath SDK bug, not our code).

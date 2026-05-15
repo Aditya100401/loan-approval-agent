@@ -12,8 +12,17 @@
   },
   "functions": {},
   "agents": {
-    "loan_approval_agent": {
-      "entrypoint": "main.py:agent"
-    }
+    "loan_approval_agent": "main.py:agent"
+  },
+  "bindings": {
+    "version": "2.0",
+    "resources": [
+      {
+        "type": "Bucket",
+        "key": "Loan_Applications",
+        "name": "Loan_Applications",
+        "folderPath": "Shared"
+      }
+    ]
   }
 }
