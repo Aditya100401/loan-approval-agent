@@ -600,41 +600,11 @@
   Equal Housing Lender. All loans subject to credit approval.
 </footer>
 
-<!-- ─── CONFIGURATION ────────────────────────────────────────────── -->
-<!--
-  SUBSTITUTE THESE VALUES before the demo:
-    TRIGGER_URL  — The full API trigger URL from Orchestrator
-                   e.g. https://cloud.uipath.com/{org}/{tenant}/orchestrator_/t/{folderKey}/{slug}
-    ACCESS_TOKEN — A Personal Access Token (PAT) with OR.* scopes
-                   Generated at: cloud.uipath.com -> User Menu -> My Profile -> Personal Access Tokens
--->
+<!-- ─── CONFIGURATION ───────────────────────────────────────────────── -->
+<!-- CONFIG values live in portal_config.js (gitignored).             -->
+<!-- Copy portal_config.example.js → portal_config.js and fill in.   -->
+<script src="portal_config.js"></script>
 <script>
-  const CONFIG = {
-    TRIGGER_URL:  " https://cloud.uipath.com/courswvdqnod/DefaultTenant/orchestrator_/t/044ff0a5-c01f-4f24-b5c6-d794bc07f0b9/loanapply",
-    ACCESS_TOKEN: "rt_526881BE24261ECB4E11449105A8845EE5EB5B85CAA9EFA08D4BBABB4D867F9A-1",
-
-    // $callMode options:
-    //   "FireAndForget"     — POST returns 200 immediately, no job ID in response
-    //   "AsyncRequestReply" — POST returns 202 + Location header; must poll for result
-    //   "Sync"              — Blocks until job completes (max 15 min)
-    //
-    // For demo use "FireAndForget" — fires instantly, job appears in Orchestrator UI right away,
-    // and we extract a pseudo-reference from the response headers.
-    CALL_MODE: "FireAndForget",
-
-    // --- Storage Bucket upload ---
-    // Base Orchestrator REST API URL (no trailing slash)
-    ORCHESTRATOR_BASE_URL: "https://cloud.uipath.com/courswvdqnod/DefaultTenant/orchestrator_",
-
-    // Numeric ID of the "loan-applications" bucket.
-    // Find it: Orchestrator → your folder → Storage Buckets → click bucket → URL shows /Buckets(12345)
-    BUCKET_ID: "168284",
-
-    // Orchestrator folder that contains the bucket (e.g. "Shared" or "LoanDemo")
-    FOLDER_PATH: "Shared",
-
-    BUCKET_NAME: "Loan_Applications",
-  };
 
   // ─── DOM refs ───────────────────────────────────────────────────
   const form       = document.getElementById("loanForm");

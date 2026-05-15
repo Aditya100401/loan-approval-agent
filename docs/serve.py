@@ -23,10 +23,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-ORCHESTRATOR_BASE = "https://cloud.uipath.com/courswvdqnod/DefaultTenant/orchestrator_"
-BUCKET_ID         = "168284"
-FOLDER_ID         = "7201517"  # Orchestrator → Shared folder → URL fid=XXXXX
-PORT              = 8080
+from serve_config import BUCKET_ID, FOLDER_ID, ORCHESTRATOR_BASE
+
+PORT = 8080
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
