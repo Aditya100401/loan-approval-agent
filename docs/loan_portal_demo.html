@@ -435,17 +435,11 @@
 <!-- ─── PROGRESS STEPS ───────────────────────────────────────────── -->
 <div class="progress-bar-wrap">
   <div class="progress-steps">
-    <div class="step active">
-      <div class="step-num">1</div><br>Application
+    <div class="step active" id="step1">
+      <div class="step-num">1</div><br>Submit Application
     </div>
-    <div class="step">
-      <div class="step-num">2</div><br>AI Review
-    </div>
-    <div class="step">
-      <div class="step-num">3</div><br>Underwriting
-    </div>
-    <div class="step">
-      <div class="step-num">4</div><br>Decision
+    <div class="step" id="step2">
+      <div class="step-num">2</div><br>Under Review
     </div>
   </div>
 </div>
@@ -456,7 +450,7 @@
   <!-- ─── FORM CARD ─────────────────────────────────────────── -->
   <div class="card">
     <div class="card-header">
-      <h2>Loan Application — Step 1 of 4</h2>
+      <h2>Loan Application</h2>
       <p>Please fill in the details below and attach your supporting documentation.</p>
     </div>
     <div class="card-body">
@@ -471,12 +465,10 @@
         </div>
 
         <div class="field">
-          <label for="applicantEmail">
-            Email Address
-            <span class="optional">(optional — for status updates)</span>
-          </label>
+          <label for="applicantEmail">Email Address <span class="required">*</span></label>
           <input type="email" id="applicantEmail" name="applicantEmail"
-                 placeholder="you@example.com" autocomplete="email" />
+                 placeholder="you@example.com" autocomplete="email" required />
+          <div class="field-hint">Your application decision will be sent to this address.</div>
         </div>
 
         <div class="form-section-label">Supporting Documentation</div>
@@ -526,11 +518,8 @@
         <div class="banner banner-success" id="successBanner">
           <span class="banner-icon">&#10003;</span>
           <strong>Application submitted successfully.</strong><br />
-          Your application is now being processed by our AI underwriting system.
-          Reference: <span class="ref-id" id="jobRef"></span><br />
-          <span style="font-size:12px;color:#1a6644;margin-top:6px;display:block;">
-            You can track the status in the Meridian Lending portal or via the email address provided.
-          </span>
+          Your application is now under AI review. Once a decision is made, we'll send it to
+          <strong id="emailRef"></strong>. Reference: <span class="ref-id" id="jobRef"></span>
         </div>
         <div class="banner banner-error" id="errorBanner">
           <span class="banner-icon">&#9888;</span>
@@ -550,7 +539,7 @@
       </div>
       <div class="card-body" style="padding:20px 22px;">
         <ul class="timeline">
-          <li class="active">
+          <li>
             <strong>Application Received</strong>
             Documents sent for AI analysis
           </li>
@@ -564,7 +553,7 @@
           </li>
           <li>
             <strong>Decision Issued</strong>
-            Approve, Conditional, or Refer to Underwriter
+            Emailed to you — typically within 2 minutes
           </li>
         </ul>
       </div>
@@ -621,8 +610,8 @@
 -->
 <script>
   const CONFIG = {
-    TRIGGER_URL:  "https://cloud.uipath.com/YOUR_ORG/YOUR_TENANT/orchestrator_/t/FOLDER_KEY/SLUG",
-    ACCESS_TOKEN: "YOUR_PAT_TOKEN_HERE",
+    TRIGGER_URL:  " https://cloud.uipath.com/courswvdqnod/DefaultTenant/orchestrator_/t/044ff0a5-c01f-4f24-b5c6-d794bc07f0b9/loanapply",
+    ACCESS_TOKEN: "rt_526881BE24261ECB4E11449105A8845EE5EB5B85CAA9EFA08D4BBABB4D867F9A-1",
 
     // $callMode options:
     //   "FireAndForget"     — POST returns 200 immediately, no job ID in response
@@ -639,12 +628,12 @@
 
     // Numeric ID of the "loan-applications" bucket.
     // Find it: Orchestrator → your folder → Storage Buckets → click bucket → URL shows /Buckets(12345)
-    BUCKET_ID: "REPLACE_WITH_BUCKET_NUMERIC_ID",
+    BUCKET_ID: "168284",
 
     // Orchestrator folder that contains the bucket (e.g. "Shared" or "LoanDemo")
-    FOLDER_PATH: "REPLACE_WITH_FOLDER_PATH",
+    FOLDER_PATH: "Shared",
 
-    BUCKET_NAME: "loan-applications",
+    BUCKET_NAME: "Loan_Applications",
   };
 
   // ─── DOM refs ───────────────────────────────────────────────────
@@ -674,26 +663,27 @@
     return "ML-" + ts + "-" + rnd;
   }
 
-  // ─── Bucket upload helpers ────────────────────────────────────────
-  async function getWriteUri(filename) {
-    const url = `${CONFIG.ORCHESTRATOR_BASE_URL}/odata/Buckets(${CONFIG.BUCKET_ID})/UiPath.Server.Configuration.OData.GetWriteUri`
-              + `?path=${encodeURIComponent(filename)}&contentType=application/pdf`;
-    const resp = await fetch(url, {
+  // ─── Bucket upload via local proxy ───────────────────────────────
+  // GetWriteUri and the Azure Blob PUT are both blocked by CORS when called
+  // directly from the browser against UiPath Cloud. serve.py handles both
+  // server-side and returns {"path": filename} on success.
+  async function uploadViaProxy(file) {
+    const bytes = await file.arrayBuffer();
+    const resp  = await fetch("/api/upload", {
+      method:  "POST",
       headers: {
-        "Authorization": "Bearer " + CONFIG.ACCESS_TOKEN,
+        "Authorization":                 "Bearer " + CONFIG.ACCESS_TOKEN,
         "X-UIPATH-OrganizationUnitPath": CONFIG.FOLDER_PATH,
+        "X-Filename":                    file.name,
+        "Content-Type":                  "application/octet-stream",
       },
+      body: bytes,
     });
-    if (!resp.ok) throw new Error(`GetWriteUri failed: HTTP ${resp.status}`);
-    return resp.json(); // { Uri, Headers, Method }
-  }
-
-  async function uploadToBucket(file, writeUriData) {
-    const method  = writeUriData.Method || "PUT";
-    const headers = Object.assign({ "x-ms-blob-type": "BlockBlob" }, writeUriData.Headers || {});
-    const bytes   = await file.arrayBuffer();
-    const resp    = await fetch(writeUriData.Uri, { method, headers, body: bytes });
-    if (!resp.ok) throw new Error(`Bucket upload failed: HTTP ${resp.status}`);
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error || `Upload failed: HTTP ${resp.status}`);
+    }
+    return resp.json(); // { path: filename }
   }
 
   // ─── Form Submit ────────────────────────────────────────────────
@@ -705,8 +695,9 @@
     const fileInput = document.getElementById("documentFile");
     const file      = fileInput.files && fileInput.files[0];
 
-    if (!name) { document.getElementById("applicantName").focus(); return; }
-    if (!file) { fileInput.focus(); return; }
+    if (!name)  { document.getElementById("applicantName").focus(); return; }
+    if (!email) { document.getElementById("applicantEmail").focus(); return; }
+    if (!file)  { fileInput.focus(); return; }
     if (file.size > 10 * 1024 * 1024) {
       errorMsg.textContent = " File exceeds 10 MB limit.";
       showBanner("error", true);
@@ -724,19 +715,18 @@
     };
 
     try {
-      // Step 1: upload document to bucket
+      // Step 1: upload document to bucket (via local proxy — see serve.py)
       setProgress("Uploading document… (1/2)");
-      const writeUriData = await getWriteUri(file.name);
-      await uploadToBucket(file, writeUriData);
+      const uploadResult = await uploadViaProxy(file);
 
       // Step 2: trigger agent
       setProgress("Triggering AI review… (2/2)");
       const body = {
-        document_path: file.name,
+        document_path: uploadResult.path,
         bucket_name:   CONFIG.BUCKET_NAME,
         "$callMode":   CONFIG.CALL_MODE,
       };
-      if (email) body.applicant_email = email;
+      body.applicant_email = email;
 
       const resp = await fetch(CONFIG.TRIGGER_URL, {
         method: "POST",
@@ -762,9 +752,10 @@
         if (!ref) ref = generateFallbackRef();
 
         jobRef.textContent = ref;
+        document.getElementById("emailRef").textContent = email;
         showBanner("success", true);
-        document.querySelectorAll(".step")[0].className = "step done";
-        document.querySelectorAll(".step")[1].className = "step active";
+        document.getElementById("step1").className = "step done";
+        document.getElementById("step2").className = "step active";
       } else {
         let detail = "";
         try { const errData = await resp.json(); detail = errData.message || errData.errorMessage || JSON.stringify(errData); }
